@@ -60,10 +60,10 @@ jobs:
           pip3 install --user --upgrade "Cython<3" virtualenv buildozer
         shell: bash
 
-      # Build the APK
+      # Build the APK (FIXED: Use @v1 tag)
       - name: Build with Buildozer
         id: buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1.5
+        uses: ArtemSBulgakov/buildozer-action@v1  # ← Corrected to @v1
         with:
           command: buildozer android debug
           buildozer_version: master
