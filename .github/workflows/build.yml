@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Fix for old syntax in your original file
+      # Modern date syntax for cache
       - name: Get Date for cache
         id: get-date
         run: echo "date=$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
-      # Install system dependencies (Ubuntu 24.04 compatible)
+      # FIXED: Install dependencies (Ubuntu 24.04 – libasound2t64 + libgl1 transitional)
       - name: Install dependencies
         run: |
           sudo apt update
@@ -47,23 +47,28 @@ jobs:
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev \
             libssl-dev libgdbm-dev libnss3-dev libreadline-dev libsqlite3-dev wget \
             libbz2-dev build-essential libopenblas-dev liblapack-dev libx11-6 libxext6 \
-            libgl1-mesa-glx libgles2-mesa-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libgl1 libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libmtdev-dev xclip libpcre3 libpcre3-dev libcairo2 libgdk-pixbuf2.0-0 \
-            libdbus-glib-1-2 libasound2 libxrandr2 libxss1 libxcursor1 libxi6 libxrender1 libxtst6
+            libdbus-glib-1-2 libasound2t64 libxrandr2 libxss1 libxcursor1 libxi6 libxrender1 libxtst6
 
-          # Optional fallback for libtinfo5 (some old recipes still want it)
+          # Transitional fix for libgl1-mesa-glx (obsolete in 24.04 – download dummy from archives)
+          wget -q http://archive.ubuntu.com/ubuntu/pool/universe/m/mesa/libgl1-mesa-glx_23.0.4-0ubuntu1~22.04.1_amd64.deb || true
+          sudo dpkg -i libgl1-mesa-glx_23.0.4-0ubuntu1~22.04.1_amd64.deb || echo "libgl1-mesa-glx transitional installed or skipped"
+          rm -f libgl1-mesa-glx_*.deb
+
+          # Optional libtinfo5 fallback (if needed by old recipes)
           wget -q http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libtinfo5_6.4-2_amd64.deb || true
-          sudo dpkg -i libtinfo5_6.4-2_amd64.deb || echo "libtinfo5 not critical, continuing..."
+          sudo dpkg -i libtinfo5_6.4-2_amd64.deb || echo "libtinfo5 optional, continuing..."
           rm -f libtinfo5_6.4-2_amd64.deb
 
-          # Install Buildozer + Cython
+          # Install Python deps (Cython pinned for compatibility)
           pip3 install --user --upgrade "Cython<3" virtualenv buildozer
         shell: bash
 
-      # Build the APK (FIXED: Use @v1 tag)
+      # Build the APK
       - name: Build with Buildozer
         id: buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1  # ← Corrected to @v1
+        uses: ArtemSBulgakov/buildozer-action@v1
         with:
           command: buildozer android debug
           buildozer_version: master
