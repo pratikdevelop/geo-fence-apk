@@ -11,45 +11,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Cache Buildozer global directory
-    - name: Get Date
-      id: get-date
-      run: echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-      shell: bash
+      # Fix for old syntax in your original file
+      - name: Get Date for cache
+        id: get-date
+        run: echo "date=$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
+        shell: bash
 
-    - name: Cache Buildozer global directory
-      uses: actions/cache@v4
-      with:
-        path: ~/.buildozer_global
-        key: buildozer-global-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          buildozer-global-
+      # Cache Buildozer global directory (~/.buildozer_global)
+      - name: Cache Buildozer global
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-global-
 
-    - name: Cache Buildozer
-      uses: actions/cache@v4
-      with:
-        path: .buildozer
-        key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-
+      # Cache local .buildozer folder
+      - name: Cache Buildozer local
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-buildozer-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
 
-    # Install dependencies
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+      # Install system dependencies (Ubuntu 24.04 compatible)
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev \
+            libssl-dev libgdbm-dev libnss3-dev libreadline-dev libsqlite3-dev wget \
+            libbz2-dev build-essential libopenblas-dev liblapack-dev libx11-6 libxext6 \
+            libgl1-mesa-glx libgles2-mesa-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libmtdev-dev xclip libpcre3 libpcre3-dev libcairo2 libgdk-pixbuf2.0-0 \
+            libdbus-glib-1-2 libasound2 libxrandr2 libxss1 libxcursor1 libxi6 libxrender1 libxtst6
 
-    - name: Build with Buildozer
-      uses: ArtemSBulgakov/buildozer-action@v1
-      id: build
-      with:
-        command: buildozer android debug
-        buildozer_version: master
+          # Optional fallback for libtinfo5 (some old recipes still want it)
+          wget -q http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libtinfo5_6.4-2_amd64.deb || true
+          sudo dpkg -i libtinfo5_6.4-2_amd64.deb || echo "libtinfo5 not critical, continuing..."
+          rm -f libtinfo5_6.4-2_amd64.deb
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: GeoFence-Tracker.apk
-        path: ${{ steps.build.outputs.apk }}
+          # Install Buildozer + Cython
+          pip3 install --user --upgrade "Cython<3" virtualenv buildozer
+        shell: bash
+
+      # Build the APK
+      - name: Build with Buildozer
+        id: buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1.5
+        with:
+          command: buildozer android debug
+          buildozer_version: master
+
+      # Upload the final APK as artifact
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeoFence-Tracker.apk
+          path: bin/*.apk
+          if-no-files-found: error
