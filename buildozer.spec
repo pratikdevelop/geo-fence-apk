@@ -1,51 +1,40 @@
 [app]
 
-# (str) Title of your application
+# App info
 title = GeoFence Tracker
-
-# (str) Package name
 package.name = geofencetracker
-
-# (str) Package domain (needed for android/ios packaging)
 package.domain = org.pratik
 
-# (str) Source files to include (let blank to include all the files)
+# Source
 source.dir = .
+source.include_exts = py,png,jpg,kv,atlas,txt,html,js,css
 
-# (list) Source files to exclude (let empty to not exclude anything)
-#source.exclude_dirs = tests, bin
-
-# (list) Application requirements
-requirements = python3,kivy==2.2.1,plyer,requests,geopy,folium,pywebview,openssl
-
-# (str) Application versioning (method 1)
+# Version
 version = 1.0
 
-# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
+# ONLY COMPATIBLE PACKAGES (folium & pywebview REMOVED!)
+requirements = python3,kivy==2.2.1,plyer,requests,geopy,openssl
+
+# Orientation & fullscreen
 orientation = portrait
-
-# (list) Permissions
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION
-
-# (int) Target Android API
-android.api = 33
-
-# (int) Minimum API your APK will support
-android.minapi = 21
-
-# (str) Android entry point, default is ok for Kivy-based app
-#android.entrypoint = org.kivy.android.PythonActivity
-
-# (list) Pattern to whitelist for the whole project
-#android.whitelist_src =
-
-# (bool) Indicate if the application should be fullscreen
 fullscreen = 1
+
+# Permissions (GPS + internet)
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,FOREGROUND_SERVICE
+
+# Android API levels
+android.api = 33
+android.minapi = 21
+android.ndk = 25b
+
+# (Optional) Add icon later
+# icon.filename = icon.png
+# presplash.filename = splash.png
 
 [buildozer]
 
-# (int) Log level (0 = error only, 1 = info, 2 = debug)
+# Debug logs (very helpful)
 log_level = 2
 
-# (str) Path to build artifact storage, absolute or relative to .buildozer
-#build_dir = .buildozer
+# Warn if running as root (not needed on GitHub)
+warn_on_root = 0
