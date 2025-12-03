@@ -7,13 +7,13 @@ package.domain = org.pratik
 
 # Source
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,txt,html,js,css
+source.include_exts = py,png,jpg,kv,atlas,txt
 
 # Version
 version = 1.0
 
-# ONLY COMPATIBLE PACKAGES (folium & pywebview REMOVED!)
-requirements = python3,kivy==2.2.1,plyer,requests,geopy,openssl
+# FIXED REQUIREMENTS (openssl removed – causes toolchain crash)
+requirements = python3,kivy==2.2.1,plyer,requests,geopy
 
 # Orientation & fullscreen
 orientation = portrait
@@ -26,15 +26,12 @@ android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCES
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
-
-# (Optional) Add icon later
-# icon.filename = icon.png
-# presplash.filename = splash.png
+android.arch = arm64-v8a  # Single arch for stability (faster build, modern phones)
 
 [buildozer]
 
-# Debug logs (very helpful)
+# Debug logs
 log_level = 2
 
-# Warn if running as root (not needed on GitHub)
+# Ignore root warning (GitHub runner)
 warn_on_root = 0
