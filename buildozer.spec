@@ -12,7 +12,7 @@ source.include_exts = py,png,jpg,kv,atlas,txt
 # Version
 version = 1.0
 
-# FIXED REQUIREMENTS (openssl removed – causes toolchain crash)
+# FIXED REQUIREMENTS (no openssl/geopy issues)
 requirements = python3,kivy==2.2.1,plyer,requests,geopy
 
 # Orientation & fullscreen
@@ -22,11 +22,11 @@ fullscreen = 1
 # Permissions (GPS + internet)
 android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,FOREGROUND_SERVICE
 
-# Android API levels
+# Android API levels (minapi=24 fixes Ubuntu 24.04 toolchain crashes)
 android.api = 33
-android.minapi = 21
+android.minapi = 24
 android.ndk = 25b
-android.arch = arm64-v8a  # Single arch for stability (faster build, modern phones)
+android.archs = arm64-v8a  # Plural 'archs' – fixes warning
 
 [buildozer]
 
