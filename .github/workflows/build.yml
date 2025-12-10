@@ -14,76 +14,116 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Cache Buildozer global and local dirs for speed
-      - name: Cache Buildozer global
+      # Cache Buildozer directories for faster builds
+      - name: Cache Buildozer global directory
         uses: actions/cache@v4
         with:
-          path: ~/.buildozer_global
+          path: .buildozer_global
           key: buildozer-global-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
             buildozer-global-
 
-      - name: Cache Buildozer local
+      - name: Cache Buildozer directory
         uses: actions/cache@v4
         with:
           path: .buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}-${{ github.sha }}
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
 
-      # Install system dependencies (Ubuntu 24.04 compatible – fixed packages)
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev \
-            libssl-dev libgdbm-dev libnss3-dev libreadline-dev libsqlite3-dev wget \
-            libbz2-dev build-essential libopenblas-dev liblapack-dev libx11-6 libxext6 \
-            libgl1 libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            libmtdev-dev xclip libpcre3 libpcre3-dev libcairo2 libgdk-pixbuf2.0-0 \
-            libdbus-glib-1-2 libasound2t64 libxrandr2 libxss1 libxcursor1 libxi6 libxrender1 libxtst6
-
-          # Transitional fixes for obsolete packages
-          wget -q http://archive.ubuntu.com/ubuntu/pool/universe/m/mesa/libgl1-mesa-glx_23.0.4-0ubuntu1~22.04.1_amd64.deb || true
-          sudo dpkg -i libgl1-mesa-glx_23.0.4-0ubuntu1~22.04.1_amd64.deb || echo "libgl1-mesa-glx skipped"
-          rm -f libgl1-mesa-glx_*.deb
-
-          wget -q http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libtinfo5_6.4-2_amd64.deb || true
-          sudo dpkg -i libtinfo5_6.4-2_amd64.deb || echo "libtinfo5 optional"
-          rm -f libtinfo5_6.4-2_amd64.deb
-        shell: bash
-
-      # Setup Java 17 (for Gradle)
+      # Setup Java 17 (required for Gradle)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # Setup Python 3.8 (stable for Buildozer)
+      # Setup Python 3.9 (better compatibility with Buildozer)
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
-      # Install Python dependencies
+      # Install system dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            autoconf \
+            libtool \
+            pkg-config \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            automake
+
+      # Setup Android SDK and NDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;30.0.3"
+          sdkmanager --install "ndk;25b"
+
+      # Install Python build dependencies
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install "Cython<3" virtualenv buildozer
-        shell: bash
+          python -m pip install --upgrade pip
+          pip install --upgrade Cython==0.29.36 virtualenv
+          pip install buildozer
 
-      # Build APK (direct buildozer – accepts licenses with 'yes |')
-      - name: Build APK with Buildozer
+      # Verify buildozer.spec has no inline comments
+      - name: Verify buildozer.spec
         run: |
-          yes | buildozer -v android debug
-        shell: bash
+          if grep -E "android\.archs.*#" buildozer.spec; then
+            echo "ERROR: Found inline comment in android.archs line"
+            echo "Remove any # comments from the android.archs line in buildozer.spec"
+            exit 1
+          fi
+          echo "buildozer.spec verification passed"
+
+      # Build APK with Buildozer
+      - name: Build APK
+        run: |
+          buildozer android debug
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25b
 
       # Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: GeoFence-Tracker.apk
+          name: GeoFence-Tracker-${{ github.sha }}
           path: bin/*.apk
           if-no-files-found: error
+
+      # Optional: Create a release on tag push
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bin/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
