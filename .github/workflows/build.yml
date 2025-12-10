@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.9'
 
-      # Install system dependencies
+      # Install system dependencies (Ubuntu 24.04 compatible)
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -61,7 +61,7 @@ jobs:
             libavformat-dev \
             libavcodec-dev \
             zlib1g-dev \
-            libgstreamer1.0 \
+            libgstreamer1.0-0 \
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
             libgstreamer1.0-dev \
@@ -71,11 +71,20 @@ jobs:
             pkg-config \
             libncurses5-dev \
             libncursesw5-dev \
-            libtinfo5 \
+            libtinfo6 \
             cmake \
             libffi-dev \
             libssl-dev \
-            automake
+            automake \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            python3-pip
+
+      # Create symlink for libtinfo5 (Ubuntu 24.04 compatibility)
+      - name: Create libtinfo5 symlink
+        run: |
+          sudo ln -sf /lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.5
 
       # Setup Android SDK and NDK
       - name: Setup Android SDK
@@ -83,8 +92,9 @@ jobs:
 
       - name: Install Android SDK components
         run: |
+          yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;30.0.3"
-          sdkmanager --install "ndk;25b"
+          sdkmanager --install "ndk;25.2.9519653"
 
       # Install Python build dependencies
       - name: Install Python dependencies
@@ -106,10 +116,10 @@ jobs:
       # Build APK with Buildozer
       - name: Build APK
         run: |
-          buildozer android debug
+          yes | buildozer -v android debug
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25b
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
 
       # Upload APK artifact
       - name: Upload APK
